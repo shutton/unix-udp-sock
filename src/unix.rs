@@ -90,7 +90,7 @@ impl UdpSocket {
     pub fn from_std(socket: std::net::UdpSocket) -> io::Result<UdpSocket> {
         socket.set_nonblocking(true)?;
 
-        init(SockRef::from(&socket))?;
+        // init(SockRef::from(&socket))?;
         Ok(UdpSocket {
             io: tokio::net::UdpSocket::from_std(socket)?,
             last_send_error: LastSendError::default(),
@@ -104,7 +104,7 @@ impl UdpSocket {
     /// create a new UDP socket and attempt to bind to `addr`
     pub async fn bind<A: ToSocketAddrs>(addr: A) -> io::Result<UdpSocket> {
         let io = tokio::net::UdpSocket::bind(addr).await?;
-        init(SockRef::from(&io))?;
+        // init(SockRef::from(&io))?;
         Ok(UdpSocket {
             io,
             last_send_error: LastSendError::default(),
@@ -411,7 +411,7 @@ pub mod sync {
     impl UdpSocket {
         /// Creates a new UDP socket from a previously created `std::net::UdpSocket`
         pub fn from_std(socket: std::net::UdpSocket) -> io::Result<Self> {
-            init(SockRef::from(&socket))?;
+            // init(SockRef::from(&socket))?;
             socket.set_nonblocking(false)?;
             Ok(Self {
                 io: socket,
@@ -421,7 +421,7 @@ pub mod sync {
         /// create a new UDP socket and attempt to bind to `addr`
         pub fn bind<A: std::net::ToSocketAddrs>(addr: A) -> io::Result<Self> {
             let io = std::net::UdpSocket::bind(addr)?;
-            init(SockRef::from(&io))?;
+            // init(SockRef::from(&io))?;
             io.set_nonblocking(false)?;
             Ok(Self {
                 io,
@@ -581,6 +581,7 @@ fn set_socket_option<Fd: AsRawFd>(
 
 const OPTION_ON: libc::c_int = 1;
 
+#[allow(dead_code)]
 fn init(io: SockRef<'_>) -> io::Result<()> {
     let mut cmsg_platform_space = 0;
     if cfg!(target_os = "linux") || cfg!(target_os = "freebsd") || cfg!(target_os = "macos") {
