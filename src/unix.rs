@@ -612,7 +612,7 @@ fn init(io: SockRef<'_>) -> io::Result<()> {
     #[cfg(target_os = "linux")]
     {
         // opportunistically try to enable GRO. See gro::gro_segments().
-        if true {
+        if false {
             let _ = set_socket_option(&*io, libc::SOL_UDP, libc::UDP_GRO, OPTION_ON);
         }
 
