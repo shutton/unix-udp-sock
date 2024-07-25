@@ -90,7 +90,7 @@ impl UdpSocket {
     pub fn from_std(socket: std::net::UdpSocket) -> io::Result<UdpSocket> {
         socket.set_nonblocking(true)?;
 
-        // init(SockRef::from(&socket))?;
+        init(SockRef::from(&socket))?;
         Ok(UdpSocket {
             io: tokio::net::UdpSocket::from_std(socket)?,
             last_send_error: LastSendError::default(),
@@ -104,7 +104,7 @@ impl UdpSocket {
     /// create a new UDP socket and attempt to bind to `addr`
     pub async fn bind<A: ToSocketAddrs>(addr: A) -> io::Result<UdpSocket> {
         let io = tokio::net::UdpSocket::bind(addr).await?;
-        // init(SockRef::from(&io))?;
+        init(SockRef::from(&io))?;
         Ok(UdpSocket {
             io,
             last_send_error: LastSendError::default(),
@@ -411,7 +411,7 @@ pub mod sync {
     impl UdpSocket {
         /// Creates a new UDP socket from a previously created `std::net::UdpSocket`
         pub fn from_std(socket: std::net::UdpSocket) -> io::Result<Self> {
-            // init(SockRef::from(&socket))?;
+            init(SockRef::from(&socket))?;
             socket.set_nonblocking(false)?;
             Ok(Self {
                 io: socket,
@@ -421,7 +421,7 @@ pub mod sync {
         /// create a new UDP socket and attempt to bind to `addr`
         pub fn bind<A: std::net::ToSocketAddrs>(addr: A) -> io::Result<Self> {
             let io = std::net::UdpSocket::bind(addr)?;
-            // init(SockRef::from(&io))?;
+            init(SockRef::from(&io))?;
             io.set_nonblocking(false)?;
             Ok(Self {
                 io,
@@ -601,59 +601,62 @@ fn init(io: SockRef<'_>) -> io::Result<()> {
 
     io.set_nonblocking(true)?;
 
-    let addr = io.local_addr()?;
-    let is_ipv4 = addr.family() == libc::AF_INET as libc::sa_family_t;
+    if false {
+        let addr = io.local_addr()?;
+        let is_ipv4 = addr.family() == libc::AF_INET as libc::sa_family_t;
 
-    // macos and ios do not support IP_RECVTOS on dual-stack sockets :(
-    if is_ipv4 || ((!cfg!(any(target_os = "macos", target_os = "ios"))) && !io.only_v6()?) {
-        set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_RECVTOS, OPTION_ON)?;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        // opportunistically try to enable GRO. See gro::gro_segments().
-        let _ = set_socket_option(&*io, libc::SOL_UDP, libc::UDP_GRO, OPTION_ON);
+        // macos and ios do not support IP_RECVTOS on dual-stack sockets :(
+        if is_ipv4 || ((!cfg!(any(target_os = "macos", target_os = "ios"))) && !io.only_v6()?) {
+            set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_RECVTOS, OPTION_ON)?;
+        }
+        #[cfg(target_os = "linux")]
+        {
+            // opportunistically try to enable GRO. See gro::gro_segments().
+            let _ = set_socket_option(&*io, libc::SOL_UDP, libc::UDP_GRO, OPTION_ON);
 
-        // Forbid IPv4 fragmentation. Set even for IPv6 to account for IPv6 mapped IPv4 addresses.
-        set_socket_option(
-            &*io,
-            libc::IPPROTO_IP,
-            libc::IP_MTU_DISCOVER,
-            libc::IP_PMTUDISC_PROBE,
-        )?;
-
-        if is_ipv4 {
-            set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_PKTINFO, OPTION_ON)?;
-        } else {
+            // Forbid IPv4 fragmentation. Set even for IPv6 to account for IPv6 mapped IPv4 addresses.
             set_socket_option(
                 &*io,
-                libc::IPPROTO_IPV6,
-                libc::IPV6_MTU_DISCOVER,
+                libc::IPPROTO_IP,
+                libc::IP_MTU_DISCOVER,
                 libc::IP_PMTUDISC_PROBE,
             )?;
+
+            if is_ipv4 {
+                set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_PKTINFO, OPTION_ON)?;
+            } else {
+                set_socket_option(
+                    &*io,
+                    libc::IPPROTO_IPV6,
+                    libc::IPV6_MTU_DISCOVER,
+                    libc::IP_PMTUDISC_PROBE,
+                )?;
+            }
         }
-    }
-    #[cfg(target_os = "macos")]
-    {
-        if is_ipv4 {
-            set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_PKTINFO, OPTION_ON)?;
+        #[cfg(target_os = "macos")]
+        {
+            if is_ipv4 {
+                set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_PKTINFO, OPTION_ON)?;
+            }
         }
-    }
-    #[cfg(target_os = "freebsd")]
-    // IP_RECVDSTADDR == IP_SENDSRCADDR on FreeBSD
-    // macOS uses only IP_RECVDSTADDR, no IP_SENDSRCADDR on macOS
-    // macOS also supports IP_PKTINFO
-    {
-        if is_ipv4 {
-            set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_RECVDSTADDR, OPTION_ON)?;
-            set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_RECVIF, OPTION_ON)?;
+        #[cfg(target_os = "freebsd")]
+        // IP_RECVDSTADDR == IP_SENDSRCADDR on FreeBSD
+        // macOS uses only IP_RECVDSTADDR, no IP_SENDSRCADDR on macOS
+        // macOS also supports IP_PKTINFO
+        {
+            if is_ipv4 {
+                set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_RECVDSTADDR, OPTION_ON)?;
+                set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_RECVIF, OPTION_ON)?;
+            }
+        }
+
+        // IPV6_RECVPKTINFO is standardized
+        if !is_ipv4 {
+            set_socket_option(&*io, libc::IPPROTO_IPV6, libc::IPV6_RECVPKTINFO, OPTION_ON)?;
+            set_socket_option(&*io, libc::IPPROTO_IPV6, libc::IPV6_RECVTCLASS, OPTION_ON)?;
         }
     }
 
-    // IPV6_RECVPKTINFO is standardized
-    if !is_ipv4 {
-        set_socket_option(&*io, libc::IPPROTO_IPV6, libc::IPV6_RECVPKTINFO, OPTION_ON)?;
-        set_socket_option(&*io, libc::IPPROTO_IPV6, libc::IPV6_RECVTCLASS, OPTION_ON)?;
-    }
     Ok(())
 }
 
