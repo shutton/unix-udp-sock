@@ -617,7 +617,7 @@ fn init(io: SockRef<'_>) -> io::Result<()> {
         }
 
         // Forbid IPv4 fragmentation. Set even for IPv6 to account for IPv6 mapped IPv4 addresses.
-        if false {
+        if true {
             set_socket_option(
                 &*io,
                 libc::IPPROTO_IP,
