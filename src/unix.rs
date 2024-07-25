@@ -601,14 +601,15 @@ fn init(io: SockRef<'_>) -> io::Result<()> {
 
     io.set_nonblocking(true)?;
 
-    if false {
-        let addr = io.local_addr()?;
-        let is_ipv4 = addr.family() == libc::AF_INET as libc::sa_family_t;
+    let addr = io.local_addr()?;
+    let is_ipv4 = addr.family() == libc::AF_INET as libc::sa_family_t;
 
-        // macos and ios do not support IP_RECVTOS on dual-stack sockets :(
-        if is_ipv4 || ((!cfg!(any(target_os = "macos", target_os = "ios"))) && !io.only_v6()?) {
-            set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_RECVTOS, OPTION_ON)?;
-        }
+    // macos and ios do not support IP_RECVTOS on dual-stack sockets :(
+    if is_ipv4 || ((!cfg!(any(target_os = "macos", target_os = "ios"))) && !io.only_v6()?) {
+        set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_RECVTOS, OPTION_ON)?;
+    }
+
+    if false {
         #[cfg(target_os = "linux")]
         {
             // opportunistically try to enable GRO. See gro::gro_segments().
