@@ -617,19 +617,15 @@ fn init(io: SockRef<'_>) -> io::Result<()> {
         }
 
         // Forbid IPv4 fragmentation. Set even for IPv6 to account for IPv6 mapped IPv4 addresses.
-        if true {
-            set_socket_option(
-                &*io,
-                libc::IPPROTO_IP,
-                libc::IP_MTU_DISCOVER,
-                libc::IP_PMTUDISC_PROBE,
-            )?;
-        }
+        set_socket_option(
+            &*io,
+            libc::IPPROTO_IP,
+            libc::IP_MTU_DISCOVER,
+            libc::IP_PMTUDISC_PROBE,
+        )?;
 
         if is_ipv4 {
-            if true {
-                set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_PKTINFO, OPTION_ON)?;
-            }
+            set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_PKTINFO, OPTION_ON)?;
         } else {
             set_socket_option(
                 &*io,
