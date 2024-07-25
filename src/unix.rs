@@ -636,7 +636,7 @@ fn init(io: SockRef<'_>) -> io::Result<()> {
         }
     }
 
-    if false {
+    if true {
         #[cfg(target_os = "macos")]
         {
             if is_ipv4 {
