@@ -612,18 +612,24 @@ fn init(io: SockRef<'_>) -> io::Result<()> {
     #[cfg(target_os = "linux")]
     {
         // opportunistically try to enable GRO. See gro::gro_segments().
-        let _ = set_socket_option(&*io, libc::SOL_UDP, libc::UDP_GRO, OPTION_ON);
+        if false {
+            let _ = set_socket_option(&*io, libc::SOL_UDP, libc::UDP_GRO, OPTION_ON);
+        }
 
         // Forbid IPv4 fragmentation. Set even for IPv6 to account for IPv6 mapped IPv4 addresses.
-        set_socket_option(
-            &*io,
-            libc::IPPROTO_IP,
-            libc::IP_MTU_DISCOVER,
-            libc::IP_PMTUDISC_PROBE,
-        )?;
+        if false {
+            set_socket_option(
+                &*io,
+                libc::IPPROTO_IP,
+                libc::IP_MTU_DISCOVER,
+                libc::IP_PMTUDISC_PROBE,
+            )?;
+        }
 
         if is_ipv4 {
-            set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_PKTINFO, OPTION_ON)?;
+            if false {
+                set_socket_option(&*io, libc::IPPROTO_IP, libc::IP_PKTINFO, OPTION_ON)?;
+            }
         } else {
             set_socket_option(
                 &*io,
