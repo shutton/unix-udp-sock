@@ -1209,8 +1209,7 @@ fn decode_recv(
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
-// Chosen somewhat arbitrarily; might benefit from additional tuning.
-pub const BATCH_SIZE: usize = 32;
+pub const BATCH_SIZE: usize = libc::UIO_MAXIOV as usize;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub const BATCH_SIZE: usize = 1;
